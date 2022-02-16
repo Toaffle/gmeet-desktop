@@ -20,4 +20,3 @@ Donde contactarme
 
 Discord: **Toaffle 🌙#1893**  
 Twitter: [@toaffle_32](https://twitter.com/toaffle_32)
-Correo Electronico: [toaffle_contacto@gmail.com](mailtoi://toaffle_contacto@gmail.com)
