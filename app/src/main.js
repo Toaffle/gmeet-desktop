@@ -21,21 +21,54 @@ let GoogleMeetTray = null; // Definido antes, porque hay un problema que causa q
 
 function GoogleMeetApp() // Función principal para cargar la ventana.
 {
+    var devEnvEnabled = false; // Variable devEnvEnabled(si el modo de desarrollador esta activado)
+
+    function enableOutputLogging() // Activa el modo de desarrollador
+    {
+        devEnvEnabled = true;
+        console.log("--- Google Meet [DevEnv] ---");
+        console.log("Event logging is enabled.");
+        process.stdout.write("Launching application...");
+    }
+
+    let devEnv = {
+        report(report_content, report_type)
+        {
+            if (devEnvEnabled == true)
+            {
+                if (report_type == 1)
+                {
+                    process.stdout.write(report_content);
+                }
+                else if (report_type == 0 || !report_type)
+                {
+                    console.log(report_content);
+                }
+            }
+        }
+    };
 
     app.setPath("userData",`${app.getPath("appData")}\\Google Meet`); // Cambiar la ubicación de los datos.
 
     let GoogleMeetCFPath = `${app.getPath("userData")}\\Configuration.yml`;
 
-    fs.writeFileSync(GoogleMeetCFPath, `
-# Este archivo contiene la configuración de Google Meet Desktoo.
+
+    if (!fs.existsSync(GoogleMeetCFPath))
+    {
+        fs.writeFileSync(GoogleMeetCFPath, `# Este archivo contiene la configuración de Google Meet Desktoo.
 # Si necesitas ayuda para modificarlo, puedes
 # encontrar ayuda aquí: https://toaffle.github.io/GoogleMeet/docs/Config_File.html
 
 WindowWidth: 1000
 WindowHeight: 600
 AutoHideMenuBar: true
-ShowBeforeLoad: false
-    `);
+ShowBeforeLoad: false`);
+        devEnv.report("(OK) Archivo de configuración creado.");
+    }
+    else
+    {
+        devEnv.report("(WARN) El archivo de configuración ya existe.")
+    }
 
     
     let GoogleMeetConfFile = fs.readFileSync(GoogleMeetCFPath, "utf-8");
@@ -51,7 +84,7 @@ ShowBeforeLoad: false
         minHeight: 400, // Alto minimo
         minWidth: 600, // Ancho minimo
         x: 200, // Posicion x
-        y: 200, // Posicion y
+        y: 50, // Posicion y
         show: false // Esconder la ventana.
     });
 
@@ -61,6 +94,7 @@ ShowBeforeLoad: false
     if (GoogleMeetConfig.ShowBeforeLoad == true)
     {
         GoogleMeetWindow.show();
+
     }
     else
     {
@@ -76,9 +110,8 @@ ShowBeforeLoad: false
         {
             label: "Mostrar/Esconder",
             accelerator: "CmdOrCtrl+H",
-            click: function()
-            {
-                if (GoogleMeetWindow.isVisible == true)
+            click: () => {
+                if (GoogleMeetWindow.isVisible() == true)
                     GoogleMeetWindow.hide();
                 else
                     GoogleMeetWindow.show();
@@ -91,11 +124,69 @@ ShowBeforeLoad: false
         }
     ];
 
+    let AppContextMenuTemplate = [
+        {
+            label: "Application",
+            submenu: [
+                {
+                    label: "Mostrar o Esconder",
+                    accelerator: "CmdOrCtrl+H",
+                    click: () => {
+                        if (GoogleMeetWindow.isVisible() == true)
+                            GoogleMeetWindow.hide();
+                        else
+                            GoogleMeetWindow.show();
+                    }
+                },
+                {
+                    label: "Cerrar",
+                    accelerator: "CmdOrCtrl+Q",
+                    click: app.quit
+                }
+            ]
+        }
+    ];
+
+    GoogleMeetWindow.setMenu(Menu.buildFromTemplate(AppContextMenuTemplate));
+
     GoogleMeetTray.setContextMenu(Menu.buildFromTemplate(TrayContextMenuTemplate));
     GoogleMeetTray.setTitle("Google Meet Desktop");
 
+    
+
+    
+
+    if (process.env.NODE_ENV == "development")
+    {
+        enableOutputLogging();
+        GoogleMeetWindow.webContents.openDevTools({
+            mode: "detach"
+        });
+    }
+
 };
+
+app.setUserTasks([
+    {
+      program: process.execPath,
+      arguments: 'new',
+      iconPath: process.execPath,
+      iconIndex: 0,
+      title: 'Nueva reunión.',
+      description: 'Crear una nueva reunión.'
+    },
+    {
+        program: process.execPath,
+        arguments: 'join',
+        iconPath: process.execPath,
+        iconIndex: 0,
+        title: "Unirse",
+        description: 'Unirse a una reunión."'
+      }
+]);
 
 app.whenReady().then(() => {
     GoogleMeetApp();
+    console.log(" Done.");
 });
+
