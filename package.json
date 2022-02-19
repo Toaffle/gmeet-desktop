@@ -1,6 +1,6 @@
 {
   "name": "gmeet",
-  "version": "0.3.0",
+  "version": "0.2.0",
   "description": "Google Meet pero para escritorio.",
   "main": "app/src/main.js",
   "scripts": {
@@ -16,5 +16,8 @@
   "dependencies": {
     "electron": "^17.0.1",
     "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "electron-packager": "^15.4.0"
   }
 }

@@ -12,7 +12,7 @@
  */
 
 const electron = require("electron"); // Importar electron para poder crear la ventana principal.
-const { app, BrowserWindow, Menu, Tray, shell } = require("electron"); // Importar todo lo necesario de electron para no tener que complicarme usando `electron.app...`
+const { app, BrowserWindow, Menu, Tray, ipcMain } = require("electron"); // Importar todo lo necesario de electron para no tener que complicarme usando `electron.app...`
 const fs = require("fs"); // Importar fs para leer el archivo de configuración en %APPDATA%\Google Meet
 const yaml = require("js-yaml"); // Importar YAML para poder leer el contenido del archivo de configuración y la template.
 const path = require("path"); // Path y ya we.
@@ -21,33 +21,6 @@ let GoogleMeetTray = null; // Definido antes, porque hay un problema que causa q
 
 function GoogleMeetApp() // Función principal para cargar la ventana.
 {
-    var devEnvEnabled = false; // Variable devEnvEnabled(si el modo de desarrollador esta activado)
-
-    function enableOutputLogging() // Activa el modo de desarrollador
-    {
-        devEnvEnabled = true;
-        console.log("--- Google Meet [DevEnv] ---");
-        console.log("Event logging is enabled.");
-        process.stdout.write("Launching application...");
-    }
-
-    let devEnv = {
-        report(report_content, report_type)
-        {
-            if (devEnvEnabled == true)
-            {
-                if (report_type == 1)
-                {
-                    process.stdout.write(report_content);
-                }
-                else if (report_type == 0 || !report_type)
-                {
-                    console.log(report_content);
-                }
-            }
-        }
-    };
-
     app.setPath("userData",`${app.getPath("appData")}\\Google Meet`); // Cambiar la ubicación de los datos.
 
     let GoogleMeetCFPath = `${app.getPath("userData")}\\Configuration.yml`;
@@ -63,11 +36,40 @@ WindowWidth: 1000
 WindowHeight: 600
 AutoHideMenuBar: true
 ShowBeforeLoad: false`);
-        devEnv.report("(OK) Archivo de configuración creado.");
     }
-    else
+
+    let num = app.isPackaged == true ? 1 : 2;
+    var argv = process.argv;
+    var args = argv.slice(num);
+    var waitForInput = false;
+
+    if (args[0] == "new")
     {
-        devEnv.report("(WARN) El archivo de configuración ya existe.")
+        GoogleMeetWindow.loadURL(Base + "/new");
+    }
+    else if (args[0] == "join")
+    {
+        if (args[1])
+        {
+            GoogleMeetWindow.loadURL(Base + "/" + args[1]);
+        }
+        else
+        {
+            let JoinWindow = new BrowserWindow({
+                width: 600,
+                height: 300,
+                title: "Unirse a la reunión.",
+                icon: "icon.ico"
+            });
+
+            // JoinWindow.setMenu(null);
+
+            waitForInput = true;
+
+            JoinWindow.loadURL("app/src/LoadJoinWindow.html");
+
+            // ipcMain.on("RenderNewWindow");
+        }
     }
 
     
@@ -88,15 +90,16 @@ ShowBeforeLoad: false`);
         show: false // Esconder la ventana.
     });
 
-    GoogleMeetWindow.loadURL("https://meet.google.com/");
+    let Base = "https://meet.google.com";
+
+    GoogleMeetWindow.loadURL(Base);
 
     // Comprobar si la ventana se debe mostrar antes de que termine de cargar o no.
-    if (GoogleMeetConfig.ShowBeforeLoad == true)
+    if (GoogleMeetConfig.ShowBeforeLoad == true && waitForInput == false)
     {
         GoogleMeetWindow.show();
-
     }
-    else
+    else if (waitForInput == false)
     {
         GoogleMeetWindow.on("ready-to-show", function()
         {
@@ -151,19 +154,7 @@ ShowBeforeLoad: false`);
 
     GoogleMeetTray.setContextMenu(Menu.buildFromTemplate(TrayContextMenuTemplate));
     GoogleMeetTray.setTitle("Google Meet Desktop");
-
     
-
-    
-
-    if (process.env.NODE_ENV == "development")
-    {
-        enableOutputLogging();
-        GoogleMeetWindow.webContents.openDevTools({
-            mode: "detach"
-        });
-    }
-
 };
 
 app.setUserTasks([
